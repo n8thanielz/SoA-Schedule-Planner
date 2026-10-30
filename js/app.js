@@ -36,6 +36,8 @@ var _customTitle       = null;
 var _conflictPairs     = [];
 var _roomConflictPairs = [];
 var _activePlan        = null;
+var _activeTab         = 'schedule';
+var _planTabsInited    = false;
 
 // Bridge functions for editor modules
 ScheduleApp.getLoadedSchedules    = function() { return loadedSchedules; };
@@ -289,6 +291,10 @@ pdfInput.addEventListener('change', async function(e) {
     uploadView.classList.add('hidden');
     scheduleView.classList.remove('hidden');
     addFileBtn.classList.remove('hidden');
+    if (_activePlan) {
+      planTabBar.classList.remove('hidden');
+      switchTab('schedule');
+    }
   } catch (err) {
     console.error(err);
     uploadError.textContent = 'Could not parse file: ' + err.message;
@@ -324,8 +330,42 @@ addFileInput.addEventListener('change', async function(e) {
   }
 });
 
+var planTabBar = document.getElementById('plan-tab-bar');
 var planInput  = document.getElementById('plan-input');
 var planStatus = document.getElementById('plan-status');
+
+function switchTab(tab) {
+  _activeTab = tab;
+
+  document.querySelectorAll('.plan-tab-btn').forEach(function (btn) {
+    btn.classList.toggle('plan-tab-btn--active', btn.dataset.tab === tab);
+  });
+
+  // Schedule tab shows the normal grid; plan tabs show their panels
+  document.querySelector('.schedule-body').classList.toggle('hidden', tab !== 'schedule');
+  ['assignments', 'faculty', 'courses', 'checks'].forEach(function (t) {
+    var panel = document.getElementById('plan-tab-' + t);
+    if (panel) panel.classList.toggle('hidden', tab !== t);
+  });
+
+  if (_activePlan && tab !== 'schedule') {
+    if (!_planTabsInited) {
+      PlanTabs.init(_activePlan);
+      _planTabsInited = true;
+    }
+    switch (tab) {
+      case 'assignments': PlanTabs.renderAssignments(_activePlan); break;
+      case 'faculty':     PlanTabs.renderFaculty(_activePlan);     break;
+      case 'courses':     PlanTabs.renderCourses(_activePlan);     break;
+      case 'checks':      PlanTabs.renderChecks(_activePlan);      break;
+    }
+  }
+}
+
+planTabBar.addEventListener('click', function (e) {
+  var btn = e.target.closest('.plan-tab-btn');
+  if (btn && btn.dataset.tab) switchTab(btn.dataset.tab);
+});
 
 planInput.addEventListener('change', async function(e) {
   var file = e.target.files[0];
@@ -357,6 +397,8 @@ planInput.addEventListener('change', async function(e) {
       uploadView.classList.add('hidden');
       scheduleView.classList.remove('hidden');
       addFileBtn.classList.remove('hidden');
+      planTabBar.classList.remove('hidden');
+      switchTab('schedule');
     } else {
       // Plan has no schedule data yet — stay on upload view, show status
       planStatus.innerHTML =
@@ -398,7 +440,10 @@ newUploadBtn.addEventListener('click', function() {
     ScheduleApp.exitEditMode();
     loadedSchedules = [];
     _customTitle    = null;
-    _activePlan     = null;
+    _activePlan      = null;
+    _planTabsInited  = false;
+    _activeTab       = 'schedule';
+    planTabBar.classList.add('hidden');
     scheduleView.classList.add('hidden');
     uploadView.classList.remove('hidden');
     scheduleGrid.innerHTML = '';

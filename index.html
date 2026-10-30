@@ -63,11 +63,45 @@
         <span class="edit-strip-dot"></span>
         <span>EDITING — drag sections to reschedule</span>
       </div>
+      <div id="plan-tab-bar" class="plan-tab-bar hidden">
+        <button class="plan-tab-btn plan-tab-btn--active" data-tab="schedule">Schedule</button>
+        <button class="plan-tab-btn" data-tab="assignments">Assignments</button>
+        <button class="plan-tab-btn" data-tab="faculty">Faculty</button>
+        <button class="plan-tab-btn" data-tab="courses">Courses</button>
+        <button class="plan-tab-btn" data-tab="checks">Checks <span id="plan-checks-badge" class="plan-checks-badge hidden"></span></button>
+      </div>
       <div class="schedule-body">
         <div id="course-sidebar" class="course-sidebar"></div>
         <div class="schedule-wrapper">
           <div id="schedule-grid" class="schedule-grid"></div>
           <div id="online-panel" class="online-panel"></div>
+        </div>
+      </div>
+
+      <!-- Plan tab panels (shown when a plan file is loaded) -->
+      <div id="plan-tab-assignments" class="plan-tab-panel hidden">
+        <div class="plan-tab-inner">
+          <div id="plan-year-nav" class="plan-year-nav"></div>
+          <div id="plan-summary-cards" class="plan-summary-cards"></div>
+          <div class="plan-assignments-body">
+            <div id="plan-coverage-grid" class="plan-coverage-grid"></div>
+            <div id="plan-faculty-load" class="plan-faculty-load"></div>
+          </div>
+        </div>
+      </div>
+      <div id="plan-tab-faculty" class="plan-tab-panel hidden">
+        <div class="plan-tab-inner">
+          <div id="plan-faculty-table"></div>
+        </div>
+      </div>
+      <div id="plan-tab-courses" class="plan-tab-panel hidden">
+        <div class="plan-tab-inner">
+          <div id="plan-courses-table"></div>
+        </div>
+      </div>
+      <div id="plan-tab-checks" class="plan-tab-panel hidden">
+        <div class="plan-tab-inner">
+          <div id="plan-checks-content"></div>
         </div>
       </div>
     </div>
@@ -305,6 +339,7 @@
   <script src="js/editor.js"></script>
   <script src="js/editorModal.js"></script>
   <script src="js/planData.js"></script>
+  <script src="js/planTabs.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

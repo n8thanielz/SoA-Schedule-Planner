@@ -1585,3 +1585,294 @@ body.edit-mode .toolbar h1:hover {
 .snap-failed {
   animation: snap-fail-flash 0.45s ease-out;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Plan tabs
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Tab bar ── */
+.plan-tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 0 16px;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+.plan-tab-btn {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  color: #6b7280;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.plan-tab-btn:hover { color: var(--crimson); }
+.plan-tab-btn--active {
+  color: var(--crimson);
+  border-bottom-color: var(--crimson);
+}
+.plan-checks-badge {
+  display: inline-block;
+  background: var(--crimson);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+  line-height: 14px;
+}
+
+/* ── Panel wrapper ── */
+.plan-tab-panel {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.plan-tab-inner {
+  padding: 16px 20px;
+  max-width: 1400px;
+}
+
+/* ── Year nav ── */
+.plan-year-nav { margin-bottom: 14px; }
+.pyn-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pyn-btn {
+  background: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+}
+.pyn-btn:disabled { opacity: 0.35; cursor: default; }
+.pyn-btn:not(:disabled):hover { background: var(--crimson-tint); border-color: var(--crimson); }
+.pyn-select {
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: #111;
+  background: #fff;
+  cursor: pointer;
+}
+
+/* ── Summary cards ── */
+.plan-summary-cards {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.psc-card {
+  flex: 1;
+  min-width: 120px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.psc-card--problem { background: var(--crimson-tint); border-color: #f0c0c0; }
+.psc-card--ok      { background: #f0faf0; border-color: #b3dcb3; }
+.psc-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.1;
+}
+.psc-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+.psc-sub {
+  font-size: 11px;
+  color: var(--crimson);
+  margin-top: 3px;
+  font-weight: 600;
+}
+.psc-card--ok .psc-sub { color: #2d8a2d; }
+
+/* ── Assignments layout ── */
+.plan-assignments-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.plan-coverage-grid { flex: 1; min-width: 0; overflow-x: auto; }
+.plan-faculty-load {
+  width: 200px;
+  flex-shrink: 0;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+/* ── Coverage grid table ── */
+.pcg-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: 100%;
+}
+.pcg-table th {
+  padding: 6px 10px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  color: #374151;
+}
+.pcg-course-col { min-width: 130px; }
+.pcg-term-col   { min-width: 120px; width: 160px; }
+.pcg-table td   { padding: 5px 8px; border: 1px solid #e5e7eb; vertical-align: top; }
+.pcg-group-row td {
+  background: #e9eaec;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #374151;
+  padding: 4px 10px;
+}
+.pcg-course-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111;
+  white-space: nowrap;
+}
+.pcg-cell { display: flex; flex-wrap: wrap; gap: 3px; }
+.pcg-cell-dash { color: #ccc; font-size: 13px; }
+
+/* instructor chips */
+.pcg-chip {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pcg-chip--ok       { background: #e0e7ff; color: #1e3a8a; }
+.pcg-chip--overload { background: #fef3c7; color: #92400e; }
+.pcg-chip--over     { background: #fef3c7; color: #92400e; }
+.pcg-chip--inactive { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; }
+.pcg-chip--open     { background: var(--crimson-tint); color: var(--crimson); border: 1px dashed var(--crimson); }
+
+/* ── Faculty load panel ── */
+.pfl-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+.pfl-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+.pfl-name {
+  font-size: 11px;
+  color: #111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pfl-bar-wrap {
+  width: 48px;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.pfl-bar {
+  height: 100%;
+  background: #6ab04c;
+  border-radius: 3px;
+  transition: width 0.2s;
+}
+.pfl-bar--over { background: var(--crimson); }
+.pfl-nums {
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pfl-nums--ok    { color: #4b5563; }
+.pfl-nums--over  { color: var(--crimson); }
+.pfl-nums--under { color: #92400e; }
+.pfl-nums--nocon { color: #9ca3af; }
+
+/* ── Faculty table ── */
+.pft-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+}
+.pft-table th, .pft-table td {
+  padding: 7px 12px;
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+.pft-table th  { background: #f3f4f6; font-weight: 600; color: #374151; }
+.pft-table tr:hover td { background: #fafafa; }
+.pft-over      { color: var(--crimson); font-weight: 600; }
+.pft-under     { color: #92400e; }
+
+/* ── Courses table ── */
+.pct-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+}
+.pct-table th, .pct-table td {
+  padding: 7px 12px;
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+.pct-table th    { background: #f3f4f6; font-weight: 600; color: #374151; }
+.pct-table tr:hover td { background: #fafafa; }
+.pct-inactive td { color: #9ca3af; }
+
+/* ── Checks ── */
+.pch-group { margin-bottom: 20px; }
+.pch-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+.pch-label--problem { background: var(--crimson-tint); color: var(--crimson); }
+.pch-label--info    { background: #fef3c7; color: #92400e; }
+.pch-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #374151;
+  line-height: 2;
+}
+.pch-empty {
+  color: #6b7280;
+  font-size: 14px;
+  padding: 20px 0;
+}
