@@ -35,9 +35,11 @@ var loadedSchedules    = [];
 var _customTitle       = null;
 var _conflictPairs     = [];
 var _roomConflictPairs = [];
+var _activePlan        = null;
 
 // Bridge functions for editor modules
 ScheduleApp.getLoadedSchedules    = function() { return loadedSchedules; };
+ScheduleApp.getActivePlan         = function() { return _activePlan; };
 ScheduleApp.triggerRenderAll      = function() { renderAll(); };
 ScheduleApp.showExportNamePrompt  = function(title, defaultName, ext, cb) { _showExportNamePrompt(title, defaultName, ext, cb); };
 ScheduleApp.defaultExportPrefix   = function() { return _defaultExportPrefix(); };
@@ -217,9 +219,56 @@ function removeFile(index) {
 
 async function loadFile(file) {
   var schedule = await ScheduleApp.parseCSV(file);
+
+  if (_activePlan) {
+    var term = PlanData.termCode(schedule.semester);
+    if (term) {
+      var results = PlanData.reconcileCsv(_activePlan, schedule.sections, term);
+
+      // Record import metadata in the plan
+      _activePlan.termMeta = _activePlan.termMeta || {};
+      _activePlan.termMeta[term] = {
+        label:          schedule.semester,
+        csvImportedOn:  new Date().toISOString().slice(0, 10)
+      };
+
+      // Build a schedule object from the now-populated plan assignments
+      var reconciledSchedule = PlanData.termToSchedule(_activePlan, term);
+
+      // Append CSV rows that had no matching plan assignment as new sections
+      results.newSections.forEach(function(s) { s._isNew = true; });
+      reconciledSchedule.sections = reconciledSchedule.sections.concat(results.newSections);
+
+      var fi = loadedSchedules.length;
+      reconciledSchedule.sections.forEach(function(s) { s._fileIndex = fi; });
+      loadedSchedules.push(reconciledSchedule);
+
+      if (results.newSections.length || results.unscheduled.length) {
+        _showReconcileNotice(results, term);
+      }
+      return;
+    }
+  }
+
+  // No plan loaded — standard CSV path
   var fi = loadedSchedules.length;
   schedule.sections.forEach(function(s) { s._fileIndex = fi; });
   loadedSchedules.push(schedule);
+}
+
+function _showReconcileNotice(results, term) {
+  var parts = [];
+  if (results.newSections.length) {
+    parts.push(results.newSections.length + ' section' +
+      (results.newSections.length !== 1 ? 's' : '') +
+      ' from the CSV had no matching plan entry and were added as new');
+  }
+  if (results.unscheduled.length) {
+    parts.push(results.unscheduled.length + ' planned section' +
+      (results.unscheduled.length !== 1 ? 's' : '') +
+      ' in ' + PlanData.semesterLabel(term) + ' have no schedule data yet');
+  }
+  if (parts.length) console.info('[Plan reconciliation] ' + parts.join('; ') + '.');
 }
 
 pdfInput.addEventListener('change', async function(e) {
@@ -275,6 +324,58 @@ addFileInput.addEventListener('change', async function(e) {
   }
 });
 
+var planInput  = document.getElementById('plan-input');
+var planStatus = document.getElementById('plan-status');
+
+planInput.addEventListener('change', async function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+
+  uploadError.classList.add('hidden');
+  planStatus.classList.add('hidden');
+
+  try {
+    var text = await file.text();
+    var raw  = JSON.parse(text);
+    _activePlan = PlanData.migrate(raw);
+
+    var totalAssignments = _activePlan.assignments.length;
+    var totalFaculty     = _activePlan.faculty.filter(function(f) { return f.active; }).length;
+    var totalCourses     = _activePlan.courses.filter(function(c) { return c.active; }).length;
+    var scheduledTerms   = PlanData.scheduledTerms(_activePlan);
+
+    if (scheduledTerms.length) {
+      // Plan already has schedule data — load it straight into the editor
+      loadedSchedules = [];
+      scheduledTerms.forEach(function(term) {
+        var sch = PlanData.termToSchedule(_activePlan, term);
+        var fi  = loadedSchedules.length;
+        sch.sections.forEach(function(s) { s._fileIndex = fi; });
+        loadedSchedules.push(sch);
+      });
+      renderAll();
+      uploadView.classList.add('hidden');
+      scheduleView.classList.remove('hidden');
+      addFileBtn.classList.remove('hidden');
+    } else {
+      // Plan has no schedule data yet — stay on upload view, show status
+      planStatus.innerHTML =
+        '<strong>Plan loaded:</strong> ' +
+        totalFaculty + ' faculty, ' +
+        totalCourses + ' courses, ' +
+        totalAssignments + ' assignments. ' +
+        'Import a CSV to add schedule details.';
+      planStatus.classList.remove('hidden');
+    }
+  } catch (err) {
+    console.error(err);
+    uploadError.textContent = 'Could not load plan file: ' + err.message;
+    uploadError.classList.remove('hidden');
+  } finally {
+    planInput.value = '';
+  }
+});
+
 toggleOnlineBtn.addEventListener('click', function() {
   var hidden = onlinePanel.dataset.userHidden === 'true';
   if (hidden) {
@@ -296,7 +397,8 @@ newUploadBtn.addEventListener('click', function() {
   ScheduleApp.promptIfDirty(function() {
     ScheduleApp.exitEditMode();
     loadedSchedules = [];
-    _customTitle = null;
+    _customTitle    = null;
+    _activePlan     = null;
     scheduleView.classList.add('hidden');
     uploadView.classList.remove('hidden');
     scheduleGrid.innerHTML = '';
@@ -306,6 +408,7 @@ newUploadBtn.addEventListener('click', function() {
     addFileBtn.classList.add('hidden');
     toggleOnlineBtn.textContent = 'Hide Online';
     toggleOnlineBtn.classList.remove('active');
+    planStatus.classList.add('hidden');
   });
 });
 

@@ -106,6 +106,45 @@ body {
   display: none;
 }
 
+.upload-btn-outline {
+  background: transparent;
+  color: var(--crimson);
+  border: 2px solid var(--crimson);
+}
+.upload-btn-outline:hover {
+  background: var(--crimson);
+  color: #fff;
+}
+
+.upload-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #aaa;
+  font-size: 0.8em;
+  margin: 4px 0;
+  width: 100%;
+}
+.upload-or::before,
+.upload-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
+}
+
+.plan-status {
+  font-size: 0.85em;
+  color: #444;
+  background: var(--crimson-tint);
+  border: 1px solid #e8c4c4;
+  border-radius: 6px;
+  padding: 8px 14px;
+  text-align: left;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
 .upload-error {
   margin-top: 16px;
   padding: 10px 16px;

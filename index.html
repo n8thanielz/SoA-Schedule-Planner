@@ -24,9 +24,15 @@
           </div>
         </div>
         <label class="upload-btn" for="pdf-input">
-          Choose Files
+          Choose CSV Files
           <input type="file" id="pdf-input" accept=".csv" multiple />
         </label>
+        <div class="upload-or"><span>or start with a plan file</span></div>
+        <label class="upload-btn upload-btn-outline" for="plan-input">
+          Open Plan File
+          <input type="file" id="plan-input" accept=".json" />
+        </label>
+        <div id="plan-status" class="plan-status hidden"></div>
         <div id="upload-error" class="upload-error hidden"></div>
         <div id="upload-loading" class="upload-loading hidden">
           <div class="spinner"></div>
@@ -298,6 +304,7 @@
   <script src="js/xlsxExport.js"></script>
   <script src="js/editor.js"></script>
   <script src="js/editorModal.js"></script>
+  <script src="js/planData.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
