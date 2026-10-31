@@ -1726,21 +1726,27 @@ body.edit-mode .toolbar h1:hover {
   border-collapse: collapse;
   font-size: 12px;
   width: 100%;
+  table-layout: fixed;
 }
 .pcg-table th {
   padding: 6px 10px;
   background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #d1d5db;
   font-weight: 600;
   text-align: left;
   white-space: nowrap;
   color: #374151;
 }
-.pcg-course-col { min-width: 130px; }
-.pcg-term-col   { min-width: 120px; width: 160px; }
-.pcg-table td   { padding: 5px 8px; border: 1px solid #e5e7eb; vertical-align: top; }
+.pcg-course-col { width: 160px; }
+.pcg-term-col   { width: auto; }
+
+/* column shading — index 0=Fall(white), 1=Spring(blue tint), 2=Summer(gold tint) */
+.pcg-col-1 { background: #f0f4ff; }
+.pcg-col-2 { background: #fffbf0; }
+
+.pcg-table td   { padding: 5px 8px; border: 1px solid #d1d5db; vertical-align: top; }
 .pcg-group-row td {
-  background: #e9eaec;
+  background: #e2e4e8 !important;
   font-weight: 700;
   font-size: 11px;
   text-transform: uppercase;
@@ -1753,9 +1759,16 @@ body.edit-mode .toolbar h1:hover {
   font-weight: 600;
   color: #111;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.pcg-cell { display: flex; flex-wrap: wrap; gap: 3px; }
-.pcg-cell-dash { color: #ccc; font-size: 13px; }
+.pcg-cell { display: flex; flex-wrap: wrap; gap: 3px; min-height: 28px; }
+.pcg-cell-dash {
+  color: #9ca3af;
+  font-size: 12px;
+  align-self: center;
+  padding: 2px 4px;
+}
 
 /* instructor chips */
 .pcg-chip {

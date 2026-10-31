@@ -174,8 +174,8 @@ var PlanTabs = (function () {
 
     var html = '<table class="pcg-table"><thead><tr>';
     html += '<th class="pcg-course-col">Course</th>';
-    terms.forEach(function (t) {
-      html += '<th class="pcg-term-col">' + PlanData.semesterLabel(t).split(' ')[0] + '</th>';
+    terms.forEach(function (t, idx) {
+      html += '<th class="pcg-term-col pcg-col-' + idx + '">' + PlanData.semesterLabel(t) + '</th>';
     });
     html += '</tr></thead><tbody>';
 
@@ -184,11 +184,11 @@ var PlanTabs = (function () {
       groups[cat].forEach(function (course) {
         html += '<tr class="pcg-course-row">';
         html += '<td class="pcg-course-name" title="' + _esc(course.title) + '">' + course.code + '</td>';
-        terms.forEach(function (term) {
+        terms.forEach(function (term, idx) {
           var asgList = _cellAssignments(plan, course.id, term);
           var n       = _need(plan, course.id, term);
           var open    = Math.max(0, n - asgList.length);
-          html += '<td class="pcg-cell">';
+          html += '<td class="pcg-cell pcg-col-' + idx + '">';
           asgList.forEach(function (a, i) {
             var fac      = _findId(plan.faculty, a.facultyId);
             var name     = fac ? _shortName(fac.name) : '?';
