@@ -1762,12 +1762,13 @@ body.edit-mode .toolbar h1:hover {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.pcg-cell { display: flex; flex-wrap: wrap; gap: 3px; min-height: 28px; }
+.pcg-cell { vertical-align: top; min-width: 0; }
+.pcg-chips { display: flex; flex-wrap: wrap; gap: 3px; min-height: 24px; padding: 2px 0; }
 .pcg-cell-dash {
   color: #9ca3af;
   font-size: 12px;
-  align-self: center;
-  padding: 2px 4px;
+  padding: 4px 2px;
+  display: block;
 }
 
 /* instructor chips */

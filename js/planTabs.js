@@ -188,7 +188,7 @@ var PlanTabs = (function () {
           var asgList = _cellAssignments(plan, course.id, term);
           var n       = _need(plan, course.id, term);
           var open    = Math.max(0, n - asgList.length);
-          html += '<td class="pcg-cell pcg-col-' + idx + '">';
+          html += '<td class="pcg-cell pcg-col-' + idx + '"><div class="pcg-chips">';
           asgList.forEach(function (a, i) {
             var fac      = _findId(plan.faculty, a.facultyId);
             var name     = fac ? _shortName(fac.name) : '?';
@@ -203,7 +203,7 @@ var PlanTabs = (function () {
             html += '<span class="pcg-chip pcg-chip--open">Open</span>';
           }
           if (!n && !asgList.length) html += '<span class="pcg-cell-dash">&mdash;</span>';
-          html += '</td>';
+          html += '</div></td>';
         });
         html += '</tr>';
       });
