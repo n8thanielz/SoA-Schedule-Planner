@@ -94,15 +94,47 @@ var PlanData = (function () {
     return found;
   }
 
-  // Find faculty by exact name string, e.g. "Smith, John".
+  // Find faculty by name. Plan stores "Last, First"; CSV parser produces "First Last".
+  // Three-tier: exact → format-normalized → last name + first initial fuzzy.
   function findFacultyByName(plan, name) {
     if (!name) return null;
     var norm = name.trim().toLowerCase();
+
+    // Tier 1: exact match (plan-format "Last, First" input)
     for (var i = 0; i < plan.faculty.length; i++) {
       if (plan.faculty[i].name && plan.faculty[i].name.trim().toLowerCase() === norm) {
         return plan.faculty[i];
       }
     }
+
+    // Tier 2: normalize CSV "First Last" → "Last, First" then exact match
+    var spParts = norm.split(/\s+/);
+    var asLastFirst = spParts.length >= 2
+      ? spParts[spParts.length - 1] + ', ' + spParts.slice(0, -1).join(' ')
+      : null;
+    if (asLastFirst) {
+      for (var i = 0; i < plan.faculty.length; i++) {
+        if (plan.faculty[i].name && plan.faculty[i].name.trim().toLowerCase() === asLastFirst) {
+          return plan.faculty[i];
+        }
+      }
+    }
+
+    // Tier 3: last name + first initial fuzzy (handles nicknames: Jenn/Jennifer, Mac/Maclean)
+    if (spParts.length >= 2) {
+      var csvLast    = spParts[spParts.length - 1];
+      var csvInitial = spParts[0].charAt(0);
+      for (var i = 0; i < plan.faculty.length; i++) {
+        var f = plan.faculty[i];
+        if (!f.name) continue;
+        var planParts = f.name.trim().toLowerCase().split(',');
+        if (planParts.length < 2) continue;
+        var planLast  = planParts[0].trim();
+        var planFirst = planParts[1].trim();
+        if (planLast === csvLast && planFirst.charAt(0) === csvInitial) return f;
+      }
+    }
+
     return null;
   }
 
