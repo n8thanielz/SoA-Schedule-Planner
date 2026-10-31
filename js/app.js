@@ -199,6 +199,13 @@ function renderAll() {
   ScheduleApp.renderSidebar(courseSidebar, merged, loadedSchedules, removeFile);
   ScheduleApp.attachEditorBlockListeners();
 
+  if (_activePlan) {
+    PlanTabs.renderScheduleLoadPanel(_activePlan);
+  } else {
+    var slp = document.getElementById('schedule-load-panel');
+    if (slp) slp.classList.add('hidden');
+  }
+
   // Sync toolbar button with actual panel state after render
   var isHidden = onlinePanel.dataset.userHidden === 'true';
   toggleOnlineBtn.textContent = isHidden ? 'Show Online' : 'Hide Online';
@@ -245,7 +252,7 @@ async function loadFile(file) {
       reconciledSchedule.sections.forEach(function(s) { s._fileIndex = fi; });
       loadedSchedules.push(reconciledSchedule);
 
-      if (results.newSections.length || results.unscheduled.length) {
+      if (results.staffMatched.length || results.newSections.length || results.unscheduled.length) {
         _showReconcileNotice(results, term);
       }
       return;
@@ -260,17 +267,35 @@ async function loadFile(file) {
 
 function _showReconcileNotice(results, term) {
   var parts = [];
-  if (results.newSections.length) {
-    parts.push(results.newSections.length + ' section' +
-      (results.newSections.length !== 1 ? 's' : '') +
-      ' from the CSV had no matching plan entry and were added as new');
+  var label = PlanData.semesterLabel(term);
+
+  if (results.staffMatched.length) {
+    var n = results.staffMatched.length;
+    parts.push(n + ' section' + (n !== 1 ? 's' : '') +
+      ' showed Staff in CLSS but have a plan assignment — plan instructor shown');
   }
+
+  var notInPlan = results.newSections.filter(function(s) { return s._planStatus === 'not-in-plan'; });
+  if (notInPlan.length) {
+    var n = notInPlan.length;
+    parts.push(n + ' section' + (n !== 1 ? 's' : '') +
+      ' in the CSV have an instructor not in the plan — shown as-is');
+  }
+
+  var open = results.newSections.filter(function(s) { return s._planStatus === 'open'; });
+  if (open.length) {
+    var n = open.length;
+    parts.push(n + ' open section' + (n !== 1 ? 's' : '') +
+      ' in CLSS have no plan assignment');
+  }
+
   if (results.unscheduled.length) {
-    parts.push(results.unscheduled.length + ' planned section' +
-      (results.unscheduled.length !== 1 ? 's' : '') +
-      ' in ' + PlanData.semesterLabel(term) + ' have no schedule data yet');
+    var n = results.unscheduled.length;
+    parts.push(n + ' planned section' + (n !== 1 ? 's' : '') +
+      ' in ' + label + ' have no matching CLSS entry — see Checks tab');
   }
-  if (parts.length) console.info('[Plan reconciliation] ' + parts.join('; ') + '.');
+
+  if (parts.length) console.info('[Reconciliation — ' + label + '] ' + parts.join('; ') + '.');
 }
 
 pdfInput.addEventListener('change', async function(e) {
@@ -454,6 +479,8 @@ newUploadBtn.addEventListener('click', function() {
     toggleOnlineBtn.textContent = 'Hide Online';
     toggleOnlineBtn.classList.remove('active');
     planStatus.classList.add('hidden');
+    var slp = document.getElementById('schedule-load-panel');
+    if (slp) slp.classList.add('hidden');
   });
 });
 

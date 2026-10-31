@@ -58,6 +58,12 @@ function _populateModal(section, fileIndex) {
       instSeen[s.instructor] = true;
     });
   });
+  var activePlan = ScheduleApp.getActivePlan && ScheduleApp.getActivePlan();
+  if (activePlan) {
+    activePlan.faculty.forEach(function(f) {
+      if (f.active && f.name && !instSeen[f.name]) instSeen[f.name] = true;
+    });
+  }
   Object.keys(instSeen).sort(function(a, b) {
     if (a === 'Staff') return 1;
     if (b === 'Staff') return -1;

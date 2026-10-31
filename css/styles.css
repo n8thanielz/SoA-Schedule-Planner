@@ -1833,6 +1833,69 @@ body.edit-mode .toolbar h1:hover {
 .pfl-nums--under { color: #92400e; }
 .pfl-nums--nocon { color: #9ca3af; }
 
+/* ── Schedule-tab load panel ── */
+.schedule-load-panel {
+  width: 176px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  background: #fff;
+  border-left: 1px solid #e5e7eb;
+  padding: 14px 12px;
+  box-shadow: -2px 0 6px rgba(0,0,0,0.04);
+}
+.slp-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+  margin-bottom: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.slp-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 4px;
+  column-gap: 4px;
+  row-gap: 3px;
+  margin-bottom: 8px;
+}
+.slp-name {
+  grid-column: 1; grid-row: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.slp-nums {
+  grid-column: 2; grid-row: 1;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+.slp-bar-wrap {
+  grid-column: 1 / -1; grid-row: 2;
+  height: 4px;
+  background: #f3f4f6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.slp-bar {
+  height: 100%;
+  background: #60a5fa;
+  border-radius: 2px;
+  transition: width 0.2s;
+}
+.slp-bar--over { background: var(--crimson); }
+.slp-nums--ok   { color: #4b5563; }
+.slp-nums--over { color: var(--crimson); }
+.slp-nums--nocon { color: #9ca3af; }
+
 /* ── Faculty table ── */
 .pft-table {
   border-collapse: collapse;

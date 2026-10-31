@@ -152,7 +152,11 @@ var PlanData = (function () {
   // with the Schedule Editor's renderAll / exporters.
   function termToSchedule(plan, term) {
     var assignments = assignmentsForTerm(plan, term);
-    var sections    = assignments.map(function (a) { return assignmentToSection(plan, a); });
+    // Skip assignments with no schedule data — they haven't been reconciled yet
+    // and would produce invisible ghost sections in the grid.
+    var sections = assignments
+      .filter(function (a) { return (a.days && a.days.length > 0 && a.startTime) || a.isOnline; })
+      .map(function (a) { return assignmentToSection(plan, a); });
     var meta        = (plan.termMeta && plan.termMeta[term]) || {};
     var label       = meta.label || semesterLabel(term);
 
@@ -184,49 +188,114 @@ var PlanData = (function () {
   //   matched      — assignments that were updated with schedule data
   //   newSections  — CSV sections with no matching plan assignment
   //   unscheduled  — plan assignments with no matching CSV section
+  // Two-pass match. See block comment above.
+  //
+  // Pass 1 — exact:  course code + instructor name both in plan.
+  //                  Section number used as tiebreaker.
+  // Pass 2 — Staff:  CSV has "Staff"/blank; matched to any remaining unclaimed
+  //                  plan assignment for that course. Plan instructor shown instead.
+  //
+  // _planStatus on each CSV section after reconciliation:
+  //   'matched'       exact pass-1 match
+  //   'staff-matched' was Staff in CSV, plan has an assignment for this course
+  //   'not-in-plan'   instructor not in plan (prior-year or unknown) — show as-is
+  //   'open'          Staff with no remaining plan assignment — genuinely unassigned
   function reconcileCsv(plan, parsedSections, term) {
-    var results = { matched: [], newSections: [], unscheduled: [] };
+    var results = { matched: [], staffMatched: [], newSections: [], unscheduled: [] };
 
     var termAssignments = assignmentsForTerm(plan, term);
 
-    // Group plan assignments by "courseId|facultyId" so multiple sections of
-    // the same course by the same person are matched in order.
-    var groups = {};
+    // byCourseFaculty["courseId|facultyId"] and byCourse["courseId"] share
+    // the same assignment objects; `claimed` prevents double-matching.
+    var byCourseFaculty = {};
+    var byCourse        = {};
     termAssignments.forEach(function (a) {
-      var key = a.courseId + '|' + a.facultyId;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(a);
+      var cfKey = a.courseId + '|' + a.facultyId;
+      if (!byCourseFaculty[cfKey]) byCourseFaculty[cfKey] = [];
+      byCourseFaculty[cfKey].push(a);
+      if (!byCourse[a.courseId]) byCourse[a.courseId] = [];
+      byCourse[a.courseId].push(a);
     });
 
+    var claimed = {};
+
+    function _claim(group) {
+      if (!group) return null;
+      for (var i = 0; i < group.length; i++) {
+        if (!claimed[group[i].id]) { claimed[group[i].id] = true; return group[i]; }
+      }
+      return null;
+    }
+
+    function _claimPreferSecNum(group, secNum) {
+      if (secNum && group) {
+        for (var i = 0; i < group.length; i++) {
+          if (!claimed[group[i].id] && group[i].sectionNumber === secNum) {
+            claimed[group[i].id] = true;
+            return group[i];
+          }
+        }
+      }
+      return _claim(group);
+    }
+
+    // Pass 1: exact match (course + instructor both found in plan)
+    var afterPassOne = [];
     parsedSections.forEach(function (section) {
+      if (_isStaff(section.instructor)) { afterPassOne.push(section); return; }
+
       var courseObj  = findCourseByCode(plan, section.courseNumber);
-      var facultyObj = section.instructor ? findFacultyByName(plan, section.instructor) : null;
+      var facultyObj = findFacultyByName(plan, section.instructor);
+      if (!courseObj || !facultyObj) { afterPassOne.push(section); return; }
 
-      if (!courseObj || !facultyObj) {
-        results.newSections.push(section);
-        return;
-      }
+      var cfKey      = courseObj.id + '|' + facultyObj.id;
+      var assignment = _claimPreferSecNum(byCourseFaculty[cfKey], section.sectionNumber);
+      if (!assignment) { afterPassOne.push(section); return; }
 
-      var key   = courseObj.id + '|' + facultyObj.id;
-      var group = groups[key];
-
-      if (!group || !group.length) {
-        results.newSections.push(section);
-        return;
-      }
-
-      // Take the next unmatched assignment for this course+faculty combo
-      var match = group.shift();
-      _fillScheduleFields(match, section);
-      results.matched.push(match);
+      _fillScheduleFields(assignment, section);
+      section._planStatus       = 'matched';
+      section._planAssignmentId = assignment.id;
+      results.matched.push(assignment);
     });
 
-    // Remaining entries in groups have no CSV row — they are planned but unscheduled
-    Object.keys(groups).forEach(function (key) {
-      groups[key].forEach(function (a) { results.unscheduled.push(a); });
+    // Pass 2: Staff match (course in plan, instructor is Staff or blank)
+    var afterPassTwo = [];
+    afterPassOne.forEach(function (section) {
+      if (!_isStaff(section.instructor)) { afterPassTwo.push(section); return; }
+
+      var courseObj = findCourseByCode(plan, section.courseNumber);
+      if (!courseObj) { section._planStatus = 'open'; afterPassTwo.push(section); return; }
+
+      var assignment = _claim(byCourse[courseObj.id]);
+      if (!assignment) {
+        section._planStatus = 'open';
+        afterPassTwo.push(section);
+        return;
+      }
+
+      _fillScheduleFields(assignment, section);
+      section._planStatus       = 'staff-matched';
+      section._planAssignmentId = assignment.id;
+      results.staffMatched.push(assignment);
+    });
+
+    // Remaining CSV sections: set status and collect
+    afterPassTwo.forEach(function (section) {
+      if (!section._planStatus) section._planStatus = 'not-in-plan';
+      results.newSections.push(section);
+    });
+
+    // Plan assignments with no CSV match
+    termAssignments.forEach(function (a) {
+      if (!claimed[a.id]) results.unscheduled.push(a);
     });
 
     return results;
+  }
+
+  // "Staff", "", null, undefined — all treated as unassigned placeholders
+  function _isStaff(instructor) {
+    return !instructor || /^staff$/i.test(instructor.trim());
   }
 
   // ── Query helpers ─────────────────────────────────────────────────────────

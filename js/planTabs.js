@@ -323,10 +323,22 @@ var PlanTabs = (function () {
           html += '<li>Inactive course has assignments: ' + _esc(x.c.code) + '</li>';
         }
       });
+      checks.unscheduled.forEach(function (x) {
+        var who = x.f ? _esc(x.f.name) : 'Unknown';
+        html += '<li>Planned but not in CLSS: ' + _esc(x.c ? x.c.code : '?') +
+          ' &mdash; ' + _esc(who) + ' (' + PlanData.semesterLabel(x.t) + ')</li>';
+      });
+      checks.notInPlan.forEach(function (x) {
+        html += '<li>In CLSS but not in plan: ' + _esc(x.s.courseNumber) +
+          ' &mdash; ' + _esc(x.s.instructor || 'Staff') +
+          ' (' + PlanData.semesterLabel(x.t) + ')</li>';
+      });
       html += '</ul></div>';
     }
 
-    var infoCount = checks.overload.length + checks.under.length + checks.nocontract.length + checks.override.length;
+    var infoCount = checks.overload.length + checks.under.length +
+                    checks.nocontract.length + checks.override.length +
+                    checks.openBeyond.length;
     if (infoCount > 0) {
       html += '<div class="pch-group">';
       html += '<div class="pch-label pch-label--info">Info (' + infoCount + ')</div>';
@@ -343,6 +355,10 @@ var PlanTabs = (function () {
       checks.override.forEach(function (x) {
         html += '<li>Custom credits on non-variable course: ' + _esc(x.f ? x.f.name : '?') +
           ' &rarr; ' + _esc(x.c ? x.c.code : '?') + ' (' + x.a.credits + ' cr)</li>';
+      });
+      checks.openBeyond.forEach(function (x) {
+        html += '<li>Open section in CLSS beyond plan count: ' + _esc(x.s.courseNumber) +
+          ' &mdash; ' + PlanData.semesterLabel(x.t) + '</li>';
       });
       html += '</ul></div>';
     }
@@ -368,7 +384,12 @@ var PlanTabs = (function () {
   function _computeChecks(plan) {
     var terms   = _termsOf(_year);
     var courses = _visibleCourses(plan, _year);
-    var out = { open: [], over: [], overload: [], under: [], nocontract: [], inactive: [], override: [], problems: 0 };
+    var out = {
+      open: [], over: [], overload: [], under: [], nocontract: [],
+      inactive: [], override: [],
+      unscheduled: [], notInPlan: [], openBeyond: [],
+      problems: 0
+    };
 
     courses.forEach(function (c) {
       terms.forEach(function (t) {
@@ -408,8 +429,134 @@ var PlanTabs = (function () {
         }
       });
 
-    out.problems = out.open.length + out.over.length + out.inactive.length;
+    // Schedule vs. plan gaps — only for terms that are actually loaded in the grid
+    var schedules = (ScheduleApp.getLoadedSchedules && ScheduleApp.getLoadedSchedules()) || [];
+    var loadedTerms = [];
+    schedules.forEach(function (sch) {
+      var t = PlanData.termCode(sch.semester);
+      if (t && loadedTerms.indexOf(t) === -1) loadedTerms.push(t);
+    });
+    var visibleLoaded = terms.filter(function (t) { return loadedTerms.indexOf(t) !== -1; });
+
+    if (visibleLoaded.length) {
+      // Plan assignments in loaded terms that have no schedule data yet
+      visibleLoaded.forEach(function (t) {
+        plan.assignments.forEach(function (a) {
+          if (a.term !== t) return;
+          var hasSchedule = (a.days && a.days.length > 0 && a.startTime) || a.isOnline;
+          if (!hasSchedule) {
+            var c = _findId(plan.courses, a.courseId);
+            var f = _findId(plan.faculty, a.facultyId);
+            out.unscheduled.push({ a: a, c: c, f: f, t: t });
+          }
+        });
+      });
+
+      // Sections in the loaded schedule with no plan match
+      schedules.forEach(function (sch) {
+        var t = PlanData.termCode(sch.semester);
+        if (!t || visibleLoaded.indexOf(t) === -1) return;
+        sch.sections.forEach(function (s) {
+          if (s._deleted) return;
+          if (s._planStatus === 'not-in-plan') out.notInPlan.push({ s: s, t: t });
+          if (s._planStatus === 'open')        out.openBeyond.push({ s: s, t: t });
+        });
+      });
+    }
+
+    out.problems = out.open.length + out.over.length + out.inactive.length +
+                   out.unscheduled.length + out.notInPlan.length;
     return out;
+  }
+
+  // ── Schedule-tab load panel ───────────────────────────────────────────────
+
+  function renderScheduleLoadPanel(plan) {
+    var el = document.getElementById('schedule-load-panel');
+    if (!el) return;
+
+    var schedules = (ScheduleApp.getLoadedSchedules && ScheduleApp.getLoadedSchedules()) || [];
+
+    // Find which terms are currently loaded in the schedule view
+    var terms = [];
+    schedules.forEach(function (sch) {
+      var t = PlanData.termCode(sch.semester);
+      if (t && terms.indexOf(t) === -1) terms.push(t);
+    });
+
+    if (!terms.length) { el.innerHTML = ''; el.classList.add('hidden'); return; }
+
+    var year = _yearForTermCode(terms[0]);
+
+    // Accumulate credits per instructor name from live schedule sections
+    var instCredits = {};
+    schedules.forEach(function (sch) {
+      sch.sections.forEach(function (s) {
+        if (s._deleted || !s.instructor || s.instructor === 'Staff') return;
+        var cr = _sectionCredits(plan, s);
+        if (!cr) return;
+        instCredits[s.instructor] = (instCredits[s.instructor] || 0) + cr;
+      });
+    });
+
+    // Match to active plan faculty who appear in this schedule
+    var rows = [];
+    plan.faculty.forEach(function (f) {
+      if (!f.active) return;
+      var load = instCredits[f.name] || 0;
+      if (!load) return;
+      var con = year ? _contractOf(f, year) : null;
+      rows.push({ f: f, load: load, con: con });
+    });
+
+    if (!rows.length) { el.innerHTML = ''; el.classList.add('hidden'); return; }
+
+    el.classList.remove('hidden');
+
+    var termLabel = terms.length === 1
+      ? PlanData.semesterLabel(terms[0])
+      : terms.map(function (t) { return PlanData.semesterLabel(t); }).join(' + ');
+
+    var html = '<div class="slp-title">Load &mdash; ' + _esc(termLabel) + '</div>';
+    rows.forEach(function (row) {
+      var load = row.load, con = row.con, f = row.f;
+      var over = con != null && con > 0 && load > con;
+      var pct  = con ? Math.min(100, Math.round(load / con * 100)) : 50;
+      var cls  = over ? 'slp-nums--over' : (con == null ? 'slp-nums--nocon' : 'slp-nums--ok');
+      html += '<div class="slp-row">';
+      html += '<div class="slp-name">' + _esc(_shortName(f.name)) + '</div>';
+      html += '<div class="slp-nums ' + cls + '">' + load + (con != null ? '/' + con : '') + '</div>';
+      html += '<div class="slp-bar-wrap"><div class="slp-bar' + (over ? ' slp-bar--over' : '') + '" style="width:' + pct + '%"></div></div>';
+      html += '</div>';
+    });
+
+    el.innerHTML = html;
+  }
+
+  // Derive academic year string ("2026-27") from a term code ("FA26", "SP27", "SU27")
+  function _yearForTermCode(t) {
+    var m = t && t.match(/^(FA|SP|SU)(\d{2})$/);
+    if (!m) return null;
+    var n  = parseInt(m[2]);
+    var y4 = (n < 50 ? 2000 : 1900) + n;
+    if (m[1] === 'FA') return y4 + '-' + _p2((y4 + 1) % 100);
+    return (y4 - 1) + '-' + _p2(y4 % 100);
+  }
+
+  // Credits for a loaded schedule section — prefers plan assignment back-ref, falls back to course lookup
+  function _sectionCredits(plan, section) {
+    if (section._planAssignmentId) {
+      for (var i = 0; i < plan.assignments.length; i++) {
+        if (plan.assignments[i].id === section._planAssignmentId) {
+          return _credit(plan, plan.assignments[i]);
+        }
+      }
+    }
+    var cn = section.courseNumber || '';
+    for (var j = 0; j < plan.courses.length; j++) {
+      if (plan.courses[j].code === cn) return plan.courses[j].credits || 0;
+    }
+    return 0;
   }
 
   // ── Private utilities ─────────────────────────────────────────────────────
@@ -439,12 +586,13 @@ var PlanTabs = (function () {
     init: function (plan) {
       _year = _defaultYear(plan);
     },
-    getYear:           function () { return _year; },
-    setYear:           function (y) { _year = y; },
-    renderAssignments: renderAssignments,
-    renderFaculty:     renderFaculty,
-    renderCourses:     renderCourses,
-    renderChecks:      renderChecks
+    getYear:                 function () { return _year; },
+    setYear:                 function (y) { _year = y; },
+    renderAssignments:       renderAssignments,
+    renderFaculty:           renderFaculty,
+    renderCourses:           renderCourses,
+    renderChecks:            renderChecks,
+    renderScheduleLoadPanel: renderScheduleLoadPanel
   };
 
 })();
